@@ -11,6 +11,11 @@ router.post("/signup", async (req, res) => {
   try {
     console.log("📩 회원가입 요청 도착:", req.body);
 
+    const idRegex = /^[a-zA-Z0-9]{1,8}$/;
+    if (!idRegex.test(id)) {
+      return res.status(400).json({ message: "아이디는 영어와 숫자만 가능하며 8자 이하로 입력해주세요." });
+    }
+
     // 1. 아이디 중복 확인
     const existingUser = await User.findOne({ id });
     if (existingUser) {
