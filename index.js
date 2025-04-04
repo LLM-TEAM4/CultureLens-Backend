@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-
+const userRoutes = require("./routes/auth");
 const app = express();
 const port = process.env.PORT || 4000;
 
@@ -11,6 +11,7 @@ const port = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/api", userRoutes);
 
 // ✅ 라우터 등록 (중복 제거 및 순서 수정)
 const authRoutes = require("./routes/auth"); 
