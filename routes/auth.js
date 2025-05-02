@@ -1,11 +1,10 @@
-
-
 const express = require("express");
 const bcrypt = require("bcrypt");
+const fs = require("fs");
+const path = require("path");
 const User = require("../models/User");
 
 const router = express.Router();
-
 
 // ✅ 회원가입 API
 router.post("/signup", async (req, res) => {
@@ -29,12 +28,28 @@ router.post("/signup", async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 3. 유저 저장
-    const newUser = new User({ id, password: hashedPassword });
+    // 3. 기본 프로필 이미지 Base64로 읽기
+    const defaultProfilePath = path.join(__dirname, "../assets/profile.png");
+    let profileImageBase64 = "";
+    try {
+      const imageBuffer = fs.readFileSync(defaultProfilePath);
+      profileImageBase64 = `data:image/png;base64,${imageBuffer.toString("base64")}`;
+    } catch (e) {
+      console.warn("⚠️ 기본 프로필 이미지를 읽지 못했습니다.");
+    }
+
+    // 4. 유저 저장
+    const newUser = new User({
+      id,
+      password: hashedPassword,
+      profileImage: profileImageBase64,
+    });
     await newUser.save();
-    // 회원가입 성공 후 로그인 세션 설정
+
+    // 세션 설정
     req.session.user = {
       id: newUser.id,
+      profileImage: newUser.profileImage,
     };
 
     console.log("✅ 회원가입 성공:", newUser);
@@ -53,27 +68,23 @@ router.post("/login", async (req, res) => {
   try {
     console.log("🔑 로그인 요청:", req.body);
 
-    // 1. 사용자 존재 확인
     const user = await User.findOne({ id });
     if (!user) {
       return res.status(400).json({ message: "아이디가 존재하지 않습니다." });
     }
 
-    // 2. 비밀번호 비교
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "비밀번호가 틀립니다." });
     }
 
-    //사용자 정보 반환ㅡ, 로그인 성공 한다면
     req.session.user = {
-      id: user.id, // 또는 user._id
+      id: user.id,
+      profileImage: user.profileImage,
     };
-    
 
     console.log("✅ 로그인 성공:", user.id);
-    res.status(200).json({ message: "로그인 성공", user: { id: user.id } });
-
+    res.status(200).json({ message: "로그인 성공", user: { id: user.id, profileImage: user.profileImage } });
     console.log("✅ 세션 상태:", req.session);
   } catch (error) {
     console.error("❌ 로그인 오류:", error);
@@ -81,6 +92,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// ✅ 로그인 상태 확인 API
 router.get("/me", (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ message: "로그인이 필요합니다." });
@@ -88,5 +100,35 @@ router.get("/me", (req, res) => {
 
   res.status(200).json({ user: req.session.user });
 });
+
+// ✅ 프로필 이미지 업데이트 API
+router.patch("/profile", async (req, res) => {
+  try {
+    const { profileImage } = req.body;
+
+    if (!req.session.user || !profileImage) {
+      return res.status(400).json({ message: "잘못된 요청입니다." });
+    }
+
+    const user = await User.findOne({ id: req.session.user.id });
+    if (!user) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    }
+
+    user.profileImage = profileImage;
+    await user.save();
+
+    // 세션에 반영
+    req.session.user.profileImage = profileImage;
+
+    res.status(200).json({ message: "프로필 이미지가 업데이트되었습니다." });
+  } catch (err) {
+    console.error("❌ 프로필 이미지 업데이트 실패:", err);
+    res.status(500).json({ message: "서버 오류 발생" });
+  }
+});
+
+
+
 
 module.exports = router;

@@ -1,4 +1,9 @@
+const bodyParser = require("body-parser");
+
+
 const cors = require("cors");
+
+
 const MongoStore = require("connect-mongo");
 require("dotenv").config();
 
@@ -16,7 +21,8 @@ app.use(cors({
   origin: 'http://localhost:3000', // React 개발 서버의 주소
   credentials: true, // 쿠키와 같은 인증 정보 포함
 }));
-
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 app.use(
   session({
     secret: 'your-secret-key',
