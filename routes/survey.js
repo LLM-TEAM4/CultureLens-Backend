@@ -1,29 +1,29 @@
-// /routes/upload.js
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const { cloudinary } = require("../utils/cloudinary");
+const { uploadToNcpS3 } = require("../utils/s3");
 const Survey = require("../models/Survey");
 
-// Cloudinary 설정
-/**const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "survey_images",
-    allowed_formats: ["jpg", "png", "jpeg"],
-  }
-});
+const upload = multer({ storage: multer.memoryStorage() });
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage }); //upload는 multer함수가 리턴한 미들웨어
-**/
-
-router.post("/", async (req, res) => {
-  console.log("📥 POST /survey 도착");
-  console.log(req.body);
+router.post("/", upload.single("image"), async (req, res) => {
   try {
-    const { admin, country, category, entityName, imageUrl, captions } = req.body;
+    console.log("📥 PIST /survey 도착");
+    const captions = JSON.parse(req.body.captions); //어떤 것들인지
+    const { admin, country, category, entityName } = req.body;
+    const file = req.file;
+    
+
+    if (!file) {
+      console.log("❌ 이미지 없음");
+      return res.status(400).json({ message: "이미지 파일이 첨부되지 않았습니다." });
+    }
+
+    console.log("📂 받은 파일:", file.originalname);
+
+    const imageUrl = await uploadToNcpS3(file);
+    console.log("✅ 업로드된 이미지 URL:", imageUrl);
+
 
     const survey = new Survey({
       admin,
@@ -31,17 +31,41 @@ router.post("/", async (req, res) => {
       category,
       entityName,
       imageUrl,
-      captions, // 이미 배열이면 JSON.parse 필요 없음
+      captions,
     });
 
     await survey.save();
-    res.status(201).json({ message: "등록 성공", survey });
-  } catch (error) {
-    console.error("서버 에러:", error);
-    res.status(500).json({ message: "서버 에러 발생" });
+    res.status(201).json({ message: "등록 완료", survey });
+  } catch (err) {
+    console.error("에러:", err);
+    res.status(500).json({ message: "서버 에러" });
   }
 });
+router.post("/test", upload.single("image"), async (req, res) => {
+  try {
+    console.log("📥 POST /test 도착");
 
+    const file = req.file;
+    if (!file) {
+      console.log("❌ 파일 없음");
+      return res.status(400).json({ message: "이미지 파일이 첨부되지 않았습니다." });
+    }
+
+    console.log("📂 받은 파일:", file.originalname);
+
+    // ✅ NCP Object Storage에 업로드
+    const imageUrl = await uploadToNcpS3(file);
+    console.log("✅ 업로드된 이미지 URL:", imageUrl);
+
+    res.status(200).json({
+      message: "이미지 업로드 성공",
+      imageUrl,
+    });
+  } catch (error) {
+    console.error("❌ 업로드 실패:", error);
+    res.status(500).json({ message: "이미지 업로드 중 서버 오류가 발생했습니다." });
+  }
+});
 // ✅ GET /survey - 전체 설문 목록 가져오기
 router.get("/", async (req, res) => {
   try {
