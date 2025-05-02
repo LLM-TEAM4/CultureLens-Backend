@@ -7,6 +7,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: "", // 프로필 이미지(base64) 저장용
   },
+  nickname: { type: String, default: "" },   
   responses: [
     {
       surveyId: {
