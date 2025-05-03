@@ -35,3 +35,7 @@ app.listen(port, () => {
 app.get("/", (req, res) => {
   res.send("✅ 서버가 잘 작동 중입니다.");
 });
+
+// GitHub Actions가 배포했다면 PM2 로그에 찍힘
+console.log("✅ 자동 배포 테스트 로그"); 
+

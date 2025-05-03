@@ -1,0 +1,27 @@
+name: Deploy to NCP
+
+on:
+  push:
+    branches:
+      - main  # main 브랜치에 push될 때마다 실행
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Connect & Deploy to NCP server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NCP_HOST }}           # e.g. 211.188.xxx.xxx
+          username: ${{ secrets.NCP_USER }}       # e.g. root or ubuntu
+          key: ${{ secrets.NCP_SSH_KEY }}         # 비공개 키 (PEM 형식)
+          port: 22
+          script: |
+            cd ~/CultureLens-Backend
+            git pull origin main
+            npm install
+            pm2 restart backend
