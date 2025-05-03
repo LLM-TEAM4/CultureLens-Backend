@@ -8,7 +8,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.post("/", upload.single("image"), async (req, res) => {
   try {
-    console.log("📥 PIST /survey 도착");
+    console.log("📥 POST /survey 도착");
     const captions = JSON.parse(req.body.captions); //어떤 것들인지
     const { admin, country, category, entityName } = req.body;
     const file = req.file;
