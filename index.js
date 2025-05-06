@@ -3,22 +3,26 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const userRoutes = require("./routes/auth");
 const app = express();
 const port = process.env.PORT || 4000;
 
-// ✅ 미들웨어 (라우터보다 먼저 선언해야 함!)
-app.use(cors());
+// ✅ 라우터 불러오기
+const authRoutes = require("./routes/auth");
+const surveyRoutes = require("./routes/survey");
+const rankingRoutes = require("./routes/ranking");  // ⬅️ 요거 추가!
+
+// ✅ 미들웨어
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/api", userRoutes);
 
-// ✅ 라우터 등록 (중복 제거 및 순서 수정)
-const authRoutes = require("./routes/auth"); 
-const surveyRoutes = require("./routes/survey");
-
-app.use("/api/auth", authRoutes);  
+// ✅ 라우터 등록
+app.use("/api/auth", authRoutes);
 app.use("/survey", surveyRoutes);
+app.use("/api/ranking", rankingRoutes); // ⬅️ 이거 추가해줘야 /api/ranking/* 경로가 작동함
 
 // ✅ MongoDB 연결
 mongoose
@@ -35,7 +39,3 @@ app.listen(port, () => {
 app.get("/", (req, res) => {
   res.send("✅ 서버가 잘 작동 중입니다.");
 });
-
-// GitHub Actions가 배포했다면 PM2 로그에 찍힘
-console.log("✅ 자동 배포 테스트 로그"); 
-
