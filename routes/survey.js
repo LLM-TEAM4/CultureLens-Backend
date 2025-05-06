@@ -16,11 +16,8 @@ router.post("/", upload.single("image"), async (req, res) => {
     const file = req.file;
 
     if (!file) {
-      console.log("❌ 이미지 없음");
       return res.status(400).json({ message: "이미지 파일이 첨부되지 않았습니다." });
     }
-
-    console.log("📂 받은 파일:", file.originalname);
 
     const imageUrl = await uploadToNcpS3(file);
     console.log("✅ 업로드된 이미지 URL:", imageUrl);
@@ -37,52 +34,40 @@ router.post("/", upload.single("image"), async (req, res) => {
     await survey.save();
     res.status(201).json({ message: "등록 완료", survey });
   } catch (err) {
-    console.error("에러:", err);
-    res.status(500).json({ message: "서버 에러" });
+    console.error("❌ 설문 등록 에러:", err);
+    res.status(500).json({ message: "서버 오류" });
   }
 });
 
 // ✅ 이미지 업로드 테스트용
 router.post("/test", upload.single("image"), async (req, res) => {
   try {
-    console.log("📥 POST /test 도착");
-
     const file = req.file;
     if (!file) {
-      console.log("❌ 파일 없음");
       return res.status(400).json({ message: "이미지 파일이 첨부되지 않았습니다." });
     }
 
-    console.log("📂 받은 파일:", file.originalname);
-
     const imageUrl = await uploadToNcpS3(file);
-    console.log("✅ 업로드된 이미지 URL:", imageUrl);
-
-    res.status(200).json({
-      message: "이미지 업로드 성공",
-      imageUrl,
-    });
+    res.status(200).json({ message: "이미지 업로드 성공", imageUrl });
   } catch (error) {
-    console.error("❌ 업로드 실패:", error);
+    console.error("❌ 이미지 업로드 실패:", error);
     res.status(500).json({ message: "이미지 업로드 중 서버 오류가 발생했습니다." });
   }
 });
 
-// ✅ 전체 설문 목록 가져오기
+// ✅ 설문 전체 조회
 router.get("/", async (req, res) => {
   try {
-    console.log("📥 GET /survey 도착");
     const surveys = await Survey.find().sort({ createdAt: -1 });
-    console.log("📦 DB에서 가져온 설문들:", surveys);
     res.json(surveys);
   } catch (error) {
-    console.error("❌ 설문 가져오기 에러:", error);
-    res.status(500).json({ message: "설문 목록을 불러오는 중 오류가 발생했습니다." });
+    console.error("❌ 설문 목록 불러오기 실패:", error);
+    res.status(500).json({ message: "서버 오류" });
   }
 });
 
-// ✅ 설문 세부 정보 가져오기
-router.get('/:id', async (req, res) => {
+// ✅ 설문 상세 조회
+router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const survey = await Survey.findById(id);
@@ -91,21 +76,21 @@ router.get('/:id', async (req, res) => {
     }
     res.json(survey);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "서버 오류가 발생했습니다." });
+    console.error("❌ 설문 상세 조회 오류:", err);
+    res.status(500).json({ message: "서버 오류" });
   }
 });
 
-// ✅ 설문 응답 저장
-router.post('/:surveyId/answer', async (req, res) => {
+// ✅ 설문 응답 저장 (1개만 유지)
+router.post("/:id/answer", async (req, res) => {
+  const { answers } = req.body;
+  const surveyId = req.params.id;
+
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+
   try {
-    const surveyId = req.params.surveyId;
-    const { answers } = req.body;
-
-    if (!req.session || !req.session.user) {
-      return res.status(401).json({ message: "로그인이 필요합니다." });
-    }
-
     const userId = req.session.user._id;
 
     const survey = await Survey.findById(surveyId);
@@ -113,31 +98,31 @@ router.post('/:surveyId/answer', async (req, res) => {
       return res.status(404).json({ message: "설문을 찾을 수 없습니다." });
     }
 
+    // 사용자 DB 응답 저장
     await User.findByIdAndUpdate(
       userId,
       {
         $push: {
           responses: {
-            surveyId: survey._id,
-            answers: answers,
+            surveyId,
+            answers,
             respondedAt: new Date(),
           },
         },
-      },
-      { new: true }
+      }
     );
 
+    // 설문 DB 응답 저장
     await Survey.findByIdAndUpdate(
       surveyId,
       {
         $push: {
           responses: {
             respondentId: userId,
-            answers: answers,
+            answers,
           },
         },
-      },
-      { new: true }
+      }
     );
 
     res.status(200).json({ message: "응답 저장 완료" });
