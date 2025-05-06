@@ -46,19 +46,28 @@ router.post("/login", async (req, res) => {
   try {
     console.log("🔑 로그인 요청:", req.body);
 
-    // 1. 사용자 존재 확인
     const user = await User.findOne({ id });
     if (!user) {
       return res.status(400).json({ message: "아이디가 존재하지 않습니다." });
     }
 
-    // 2. 비밀번호 비교
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "비밀번호가 틀립니다." });
     }
 
+    // ✅ 세션에 로그인 정보 저장
+    req.session.user = {
+      id: user.id
+    };
+
     console.log("✅ 로그인 성공:", user.id);
+
+    req.session.user = {
+      _id: user._id,
+      id: user.id,
+    };
+    
     res.status(200).json({ message: "로그인 성공", user: { id: user.id } });
 
   } catch (error) {
@@ -66,5 +75,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "서버 오류" });
   }
 });
+
+
 
 module.exports = router;

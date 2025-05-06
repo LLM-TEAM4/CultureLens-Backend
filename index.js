@@ -3,39 +3,62 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+
+const session = require("express-session");
+
+const MongoStore = require("connect-mongo");
+
 const app = express();
 const port = process.env.PORT || 4000;
 
-// ✅ 라우터 불러오기
-const authRoutes = require("./routes/auth");
-const surveyRoutes = require("./routes/survey");
-const rankingRoutes = require("./routes/ranking");  // ⬅️ 요거 추가!
+// ✅ 세션 미들웨어
+app.use(session({
+  secret: process.env.SESSION_SECRET || "your_secret_key",  // .env에 저장 권장
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI, // 이 부분이 핵심!
+    ttl: 60 * 60 * 2, // 세션 수명 2시간
+  }),
+  cookie: {
+    httpOnly: true,
+    secure: false, // https 적용 시 true
+    maxAge: 1000 * 60 * 60 * 2, // 2시간
+  },
+}));
 
-// ✅ 미들웨어
+// ✅ CORS
 app.use(cors({
   origin: "http://localhost:3000",
   credentials: true
 }));
+
+// ✅ JSON 파싱
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ 라우터 등록
+// ✅ 라우터
+const authRoutes = require("./routes/auth");
+const surveyRoutes = require("./routes/survey");
+const rankingRoutes = require("./routes/ranking");
+
 app.use("/api/auth", authRoutes);
 app.use("/survey", surveyRoutes);
-app.use("/api/ranking", rankingRoutes); // ⬅️ 이거 추가해줘야 /api/ranking/* 경로가 작동함
+app.use("/api/ranking", rankingRoutes);
 
 // ✅ MongoDB 연결
 mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("✅ MongoDB 연결 성공"))
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("✅ MongoDB 연결 성공");
+
+    app.listen(port, () => {
+      console.log(`🚀 서버 실행 중: http://localhost:${port}`);
+    });
+  })
   .catch((err) => console.error("❌ MongoDB 연결 실패", err));
 
-// ✅ 서버 실행
-app.listen(port, () => {
-  console.log(`🚀 서버 실행 중: http://localhost:${port}`);
-});
-
-// ✅ 테스트용 기본 라우터
+// ✅ 테스트 라우터
 app.get("/", (req, res) => {
   res.send("✅ 서버가 잘 작동 중입니다.");
 });
