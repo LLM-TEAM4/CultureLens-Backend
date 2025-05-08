@@ -12,6 +12,33 @@ Survey.responses는 중복 저장 가능 → 누적 이력 저장
 answers는 [1, 3, 4, ...] 형태의 점수 배열
 respondedAt은 시간 기록용 필드*/
 
+
+// 설문 등록
+router.post("/", upload.none(), async (req, res) => {
+  try {
+    const { admin, country, category, entityName } = req.body;
+    const captions = JSON.parse(req.body.captions);
+
+    const newSurvey = new Survey({
+      admin,
+      country,
+      category,
+      entityName,
+      captions,
+      imageUrl: "", // 이미지 없이 비워둠
+      isApproved: false,
+    });
+
+    await newSurvey.save();
+    res.status(201).json({ message: "등록 성공", survey: newSurvey });
+  } catch (err) {
+    console.error("❌ 설문 등록 오류:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+
+
 // 설문 전체 목록 불러오기 (진행도 포함)
 router.get("/", async (req, res) => {
   const user = req.session.user;
@@ -26,8 +53,7 @@ router.get("/", async (req, res) => {
   }
 
   try {
-    const surveys = await Survey.find();
-
+    const surveys = await Survey.find({ isApproved: true });//일반유저는 승인된설문만 볼 수 있도록록
     let userResponses = [];
     if (user?._id) {
       const foundUser = await User.findById(user._id);
@@ -123,6 +149,42 @@ router.post("/:id/answer", async (req, res) => {
   }
 });
 
+//설문 승인 처리
+router.post("/:id/approve", async (req, res) => {
+  const surveyId = req.params.id;
+
+  try {
+    const updated = await Survey.findByIdAndUpdate(
+      surveyId,
+      { isApproved: true },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ message: "설문 없음" });
+
+    res.status(200).json({ message: "승인 완료", survey: updated });
+  } catch (err) {
+    console.error("설문 승인 오류:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+//설문 거절
+router.post("/:id/reject", async (req, res) => {
+  const surveyId = req.params.id;
+
+  try {
+    const updated = await Survey.findByIdAndDelete(surveyId); // 또는 status: "rejected"로 처리
+    if (!updated) return res.status(404).json({ message: "설문 없음" });
+
+    res.status(200).json({ message: "거절 및 삭제 완료" });
+  } catch (err) {
+    console.error("설문 거절 오류:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+
 // 유저의 해당 설문 응답 개수 조회
 router.get("/:id/progress", async (req, res) => {
   if (!req.session?.user?._id) {
@@ -140,6 +202,26 @@ router.get("/:id/progress", async (req, res) => {
     res.status(200).json({ progress });
   } catch (err) {
     console.error("❌ 설문 진행도 조회 오류:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+router.get("/pending", async (req, res) => {
+  try {
+    const pendingSurveys = await Survey.find({ isApproved: false });
+    res.status(200).json(pendingSurveys);
+  } catch (err) {
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// GET /survey/:id
+router.get("/:id", async (req, res) => {
+  try {
+    const survey = await Survey.findById(req.params.id);
+    if (!survey) return res.status(404).json({ message: "존재하지 않는 설문입니다" });
+    res.status(200).json(survey);
+  } catch (err) {
     res.status(500).json({ message: "서버 오류" });
   }
 });

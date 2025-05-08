@@ -19,7 +19,7 @@ const SurveySchema = new mongoose.Schema({
   },
   imageUrl: {
     type: String,
-    required: true,
+    default: "",
   },
   captions: {
     type: [String],
@@ -34,10 +34,11 @@ const SurveySchema = new mongoose.Schema({
       },
     },
   ],
-  approved: {
+  isApproved: {
     type: Boolean,
     default: false, // 관리자 승인 전까지는 false
   },
+
   createdAt: {
     type: Date,
     default: Date.now,

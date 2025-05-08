@@ -94,6 +94,7 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "아이디가 존재하지 않습니다." });
     }
 
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "비밀번호가 틀립니다." });
     }
