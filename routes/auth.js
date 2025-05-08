@@ -14,9 +14,11 @@ router.post("/signup", async (req, res) => {
     console.log("📩 회원가입 요청 도착:", {
       id,
       password,
+      /*
       profileImage: profileImage
         ? `base64 (${profileImage.length}자)`
         : "없음",
+        */
     });
 
     const idRegex = /^[a-zA-Z0-9]{1,8}$/;
@@ -46,6 +48,7 @@ router.post("/signup", async (req, res) => {
       password: hashedPassword,
       profileImage: profileImageBase64,
       nickname: id,
+      role: "user",
     });
     await newUser.save();
 
@@ -78,14 +81,19 @@ router.post("/login", async (req, res) => {
   const { id, password } = req.body;
 
   try {
-    console.log("🔑 로그인 요청:", req.body);
+    console.log("🔑 로그인 요청:", id);
+    console.log("🟡 로그인 요청 PW(입력값):", password);
+
+    
+
+
+
 
     const user = await User.findOne({ id });
     if (!user) {
       return res.status(400).json({ message: "아이디가 존재하지 않습니다." });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "비밀번호가 틀립니다." });
     }
@@ -103,10 +111,14 @@ router.post("/login", async (req, res) => {
       id: user.id,
       nickname: user.nickname,
       profileImage: user.profileImage?.substring(0, 20) + "...(생략)",
+      role: user.role,
     });
 
     // ✅ 응답도 한 번만
-    res.status(200).json({ message: "로그인 성공", user: req.session.user });
+    res.status(200).json({ 
+      message: "로그인 성공",
+      role: user.role,
+      user: req.session.user });
 
   } catch (error) {
     console.error("❌ 로그인 오류:", error);
@@ -150,7 +162,14 @@ router.patch("/nickname", async (req, res) => {
   user.nickname = nickname;
   await user.save();
   req.session.user.nickname = nickname;
-  console.log("✅ 세션에 저장된 유저 정보:", req.session.user);
+  console.log("✅ 세션에 저장된 유저 정보:", {
+    ...req.session.user,
+    profileImage:
+      req.session.user?.profileImage?.length > 20
+        ? req.session.user.profileImage.substring(0, 20) + "...(생략)"
+        : req.session.user?.profileImage,
+  });
+  
   res.status(200).json({ message: "닉네임 변경 완료", nickname });
 });
 
