@@ -7,85 +7,21 @@ const User = require("../models/User");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// ✅ 설문 등록
-router.post("/", upload.single("image"), async (req, res) => {
-  try {
-    console.log("📥 POST /survey 도착");
-    const captions = JSON.parse(req.body.captions);
-    const { admin, country, category, entityName } = req.body;
-    const file = req.file;
+/*User.responses는 기존 응답 삭제 후 다시 추가됨 → 1회 응답 유지
 
-    if (!file) {
-      return res.status(400).json({ message: "이미지 파일이 첨부되지 않았습니다." });
-    }
+Survey.responses는 중복 저장 가능 → 누적 이력 저장
 
-    const imageUrl = await uploadToNcpS3(file);
-    console.log("✅ 업로드된 이미지 URL:", imageUrl);
+answers는 [1, 3, 4, ...] 형태의 점수 배열
 
-    const survey = new Survey({
-      admin,
-      country,
-      category,
-      entityName,
-      imageUrl,
-      captions,
-    });
+respondedAt은 시간 기록용 필드
+*/
 
-    await survey.save();
-    res.status(201).json({ message: "등록 완료", survey });
-  } catch (err) {
-    console.error("❌ 설문 등록 에러:", err);
-    res.status(500).json({ message: "서버 오류" });
-  }
-});
-
-// ✅ 이미지 업로드 테스트용
-router.post("/test", upload.single("image"), async (req, res) => {
-  try {
-    const file = req.file;
-    if (!file) {
-      return res.status(400).json({ message: "이미지 파일이 첨부되지 않았습니다." });
-    }
-
-    const imageUrl = await uploadToNcpS3(file);
-    res.status(200).json({ message: "이미지 업로드 성공", imageUrl });
-  } catch (error) {
-    console.error("❌ 이미지 업로드 실패:", error);
-    res.status(500).json({ message: "이미지 업로드 중 서버 오류가 발생했습니다." });
-  }
-});
-
-// ✅ 설문 전체 조회
-router.get("/", async (req, res) => {
-  try {
-    const surveys = await Survey.find().sort({ createdAt: -1 });
-    res.json(surveys);
-  } catch (error) {
-    console.error("❌ 설문 목록 불러오기 실패:", error);
-    res.status(500).json({ message: "서버 오류" });
-  }
-});
-
-// ✅ 설문 상세 조회
-router.get("/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const survey = await Survey.findById(id);
-    if (!survey) {
-      return res.status(404).json({ message: "설문을 찾을 수 없습니다." });
-    }
-    res.json(survey);
-  } catch (err) {
-    console.error("❌ 설문 상세 조회 오류:", err);
-    res.status(500).json({ message: "서버 오류" });
-  }
-});
-
-// ✅ 설문 응답 저장 (1개만 유지)
+// 설문 응답 저장 (중복 응답 제거 후 새로 저장)
 router.post("/:id/answer", async (req, res) => {
   const { answers } = req.body;
   const surveyId = req.params.id;
 
+  // 세션 확인
   if (!req.session || !req.session.user) {
     return res.status(401).json({ message: "로그인이 필요합니다." });
   }
@@ -93,14 +29,21 @@ router.post("/:id/answer", async (req, res) => {
   try {
     const userId = req.session.user._id;
 
+    // 설문 존재 확인
     const survey = await Survey.findById(surveyId);
     if (!survey) {
       return res.status(404).json({ message: "설문을 찾을 수 없습니다." });
     }
 
-    // 사용자 DB 응답 저장
-    await User.findByIdAndUpdate(
-      userId,
+    // ✅ 1. 사용자 응답 중복 제거
+    await User.updateOne(
+      { _id: userId },
+      { $pull: { responses: { surveyId } } }
+    );
+
+    // ✅ 2. 사용자 응답 새로 저장
+    await User.updateOne(
+      { _id: userId },
       {
         $push: {
           responses: {
@@ -112,9 +55,9 @@ router.post("/:id/answer", async (req, res) => {
       }
     );
 
-    // 설문 DB 응답 저장
-    await Survey.findByIdAndUpdate(
-      surveyId,
+    // ✅ 3. 설문 응답 저장 (이력으로 누적됨)
+    await Survey.updateOne(
+      { _id: surveyId },
       {
         $push: {
           responses: {

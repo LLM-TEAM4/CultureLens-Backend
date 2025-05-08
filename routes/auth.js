@@ -11,7 +11,13 @@ router.post("/signup", async (req, res) => {
   const { id, password } = req.body;
 
   try {
-    console.log("📩 회원가입 요청 도착:", req.body);
+    console.log("📩 회원가입 요청 도착:", {
+      id,
+      password,
+      profileImage: profileImage
+        ? `base64 (${profileImage.length}자)`
+        : "없음",
+    });
 
     const idRegex = /^[a-zA-Z0-9]{1,8}$/;
     if (!idRegex.test(id)) {
@@ -49,17 +55,25 @@ router.post("/signup", async (req, res) => {
       nickname: newUser.nickname,
     };
 
-    console.log("✅ 회원가입 성공:", newUser);
-    res.status(201).json({ message: "회원가입 성공" });
+   // console.log("✅ 회원가입 성공:", newUser);
+  
+   console.log("✅ 회원가입 성공:", {
+    id: newUser.id,
+    nickname: newUser.nickname,
+    profileImage: newUser.profileImage?.substring(0, 20) + "...(생략)",
+  });
+
+  res.status(200).json({ message: "회원가입 성공" });
 
   } catch (error) {
     console.error("❌ 회원가입 오류:", error);
     res.status(500).json({ message: "서버 오류 발생" });
   }
+
 });
 
-// ✅ 로그인 API
-// ✅ 로그인 API
+
+//  로그인 API
 router.post("/login", async (req, res) => {
   const { id, password } = req.body;
 
@@ -84,8 +98,12 @@ router.post("/login", async (req, res) => {
       nickname: user.nickname,
     };
 
-    console.log("✅ 로그인 성공:", user.id);
-    console.log("✅ 세션 상태:", req.session);
+   
+    console.log("✅ 로그인 성공:", {
+      id: user.id,
+      nickname: user.nickname,
+      profileImage: user.profileImage?.substring(0, 20) + "...(생략)",
+    });
 
     // ✅ 응답도 한 번만
     res.status(200).json({ message: "로그인 성공", user: req.session.user });
