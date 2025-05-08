@@ -19,23 +19,33 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage }); //upload는 multer함수가 리턴한 미들웨어
 **/
 
+//응답 항목 유효성 검사
 router.post("/", async (req, res) => {
-  console.log("📥 POST /survey 도착");
-  console.log(req.body);
-  try {
-    const { admin, country, category, entityName, imageUrl, captions } = req.body;
+  const { admin, country, category, entityName, imageUrl, captions, responses } = req.body;
 
+  // 응답 항목이 비어 있지 않거나 빈 값이 아닌지 확인하는 유효성 검사
+  const isComplete = responses.every(response => 
+    response.answers &&  // 응답이 존재하는지 확인
+    response.answers.length === captions.length && // 응답 항목 수가 캡션 수와 일치하는지 확인
+    response.answers.every(answer => answer !== null && answer !== undefined && answer !== '') // 빈 값 (null, undefined, '')이 아닌지 확인
+  );
+
+  if (!isComplete) {
+    return res.status(400).json({ message: "모든 항목에 응답해야 하며, 빈 값은 허용되지 않습니다." });
+  }
+
+  try {
     const survey = new Survey({
       admin,
       country,
       category,
       entityName,
       imageUrl,
-      captions, // 이미 배열이면 JSON.parse 필요 없음
+      captions,
+      responses, // 응답 데이터를 포함하여 저장
     });
-
     await survey.save();
-    res.status(201).json({ message: "등록 성공", survey });
+    res.status(201).json({ message: "설문 등록 성공", survey });
   } catch (error) {
     console.error("서버 에러:", error);
     res.status(500).json({ message: "서버 에러 발생" });
@@ -55,7 +65,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// 설문 세부 정보 가져오기
+// 설문 세부 정보 가져오기 (진행 상황 포함)
 router.get('/:id', async (req, res) => {
   const { id } = req.params; // URL에서 ID 받기
 
@@ -66,13 +76,27 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: "설문을 찾을 수 없습니다." });
     }
 
-    // 설문 정보 반환
-    res.json(survey);
+    // 설문 진행 상황 계산
+    const progress = survey.responses.length;  // 응답자 수
+    const goal = 20;  // 예시로 목표 응답자 수를 20명으로 설정
+
+    const progressPercentage = (progress / goal) * 100;
+
+    // 설문 정보와 진행 상황 반환
+    res.json({
+      survey,
+      progress: {
+        current: progress,
+        total: goal,
+        percentage: progressPercentage.toFixed(2),  // 진행 상태 퍼센트 계산
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "서버 오류가 발생했습니다." });
   }
 });
+
 
 module.exports = router;
 

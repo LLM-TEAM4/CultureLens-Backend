@@ -38,6 +38,10 @@ const SurveySchema = new mongoose.Schema({
     type: Date,
     default: Date.now, // 설문 생성 시 자동으로 저장되는 시간
   },
+  approved: {
+    type: Boolean,
+    default: false, // 기본값은 false로 설정 (처음 생성될 때는 승인되지 않음)
+  },
 });
 
 // 설문 모델 생성
