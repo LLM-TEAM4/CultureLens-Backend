@@ -40,8 +40,8 @@ const SurveySchema = new mongoose.Schema({
   },
   approved: {
     type: Boolean,
-    default: false, // 기본값은 false로 설정 (처음 생성될 때는 승인되지 않음)
-  },
+    default: null // null: 대기, true: 승인, false: 거절
+  },  
 });
 
 // 설문 모델 생성
