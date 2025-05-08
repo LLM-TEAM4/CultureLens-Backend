@@ -4,7 +4,7 @@ const Survey = require("../models/Survey");
 
 // ✅ 1. 승인 상태별 설문 목록 가져오기
 // GET /admin/surveys?status=pending|approved|rejected
-router.get("/surveys", async (req, res) => {
+router.get("/", async (req, res) => {
   const { status } = req.query;
 
   let filter = {};
@@ -23,7 +23,7 @@ router.get("/surveys", async (req, res) => {
 
 // ✅ 2. 설문 승인
 // POST /admin/surveys/:id/approve
-router.post("/surveys/:id/approve", async (req, res) => {
+router.post("/:id/approve", async (req, res) => {
   try {
     const updated = await Survey.findByIdAndUpdate(
       req.params.id,
@@ -39,7 +39,7 @@ router.post("/surveys/:id/approve", async (req, res) => {
 
 // ✅ 3. 설문 거절
 // POST /admin/surveys/:id/reject
-router.post("/surveys/:id/reject", async (req, res) => {
+router.post("/:id/reject", async (req, res) => {
   try {
     const updated = await Survey.findByIdAndUpdate(
       req.params.id,
