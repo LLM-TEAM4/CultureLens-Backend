@@ -116,12 +116,22 @@ router.post("/login", async (req, res) => {
 
 
 // ✅ 로그인 상태 확인 API
-router.get("/me", (req, res) => {
+router.get("/me", async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ message: "로그인이 필요합니다." });
   }
 
-  res.status(200).json({ user: req.session.user });
+  try {
+    const user = await User.findOne({ id: req.session.user.id });
+    if (!user) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    }
+
+    res.status(200).json({ user });
+  } catch (err) {
+    console.error("❌ 유저 정보 조회 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
 });
 
 // ✅ 닉네임 변경 API
