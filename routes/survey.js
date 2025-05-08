@@ -16,6 +16,31 @@ answers는 [1, 3, 4, ...] 형태의 점수 배열
 respondedAt은 시간 기록용 필드
 */
 
+router.get("/", async (req, res) => {
+  const user = req.session.user;
+
+  // 🔥 유저 로그인 정보 간결하게 출력
+  if (user) {
+    console.log("📥 설문 요청 - 유저:", {
+      id: user.id,
+      nickname: user.nickname,
+    });
+  } else {
+    console.log("📥 설문 요청 - 비로그인 사용자");
+  }
+
+  try {
+    const surveys = await Survey.find();
+    res.json(surveys);
+  } catch (error) {
+    console.error("❌ 설문 목록 조회 오류:", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+
+
+
 // 설문 응답 저장 (중복 응답 제거 후 새로 저장)
 router.post("/:id/answer", async (req, res) => {
   const { answers } = req.body;
