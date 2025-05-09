@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const Response = require("../models/Response");
 const User = require("../models/User");
+const Survey = require("../models/Survey");
 
-// ✅ 랭킹 계산 함수 (공통)
 function calculateRanking(countryMap) {
   const result = {};
 
@@ -39,38 +40,42 @@ function calculateRanking(countryMap) {
   return result;
 }
 
-// ✅ 주간 랭킹
-router.get("/weekly", async (req, res) => {
-  try {
-    const users = await User.find().populate("responses.surveyId");
-    const countryMap = {};
+// ✅ 공통 함수로 사용 (주간/월간 랭킹)
+async function generateCountryRanking(filter = {}) {
+  const responses = await Response.find(filter)
+    .populate("surveyId")
+    .populate("userId");
 
-    for (const user of users) {
-      for (const response of user.responses) {
-        const survey = response.surveyId;
-        if (!survey || !survey.country) {
-          //console.log("⚠️ 주간: 유효하지 않은 설문:", survey);
-          continue;
-        }
+  const countryMap = {};
 
-        const country = survey.country;
+  for (const res of responses) {
+    const survey = res.surveyId;
+    const user = res.userId;
+    if (!survey || !user || !survey.country) continue;
 
-        if (!countryMap[country]) countryMap[country] = {};
+    const country = survey.country;
 
-        if (!countryMap[country][user.id]) {
-          countryMap[country][user.id] = {
-            id: user.id,
-            nickname: user.nickname,
-            profileImage: user.profileImage,
-            count: 0,
-          };
-        }
+    if (!countryMap[country]) countryMap[country] = {};
 
-        countryMap[country][user.id].count += 1;
-      }
+    if (!countryMap[country][user.id]) {
+      countryMap[country][user.id] = {
+        id: user.id,
+        nickname: user.nickname,
+        profileImage: user.profileImage,
+        count: 0,
+      };
     }
 
-    const result = calculateRanking(countryMap);
+    countryMap[country][user.id].count += 1;
+  }
+
+  return calculateRanking(countryMap);
+}
+
+// ✅ 주간 랭킹 (기간 제한 없이 전체 응답 기준)
+router.get("/weekly", async (req, res) => {
+  try {
+    const result = await generateCountryRanking();
     res.status(200).json(result);
   } catch (err) {
     console.error("❌ 주간 랭킹 조회 오류:", err);
@@ -78,55 +83,16 @@ router.get("/weekly", async (req, res) => {
   }
 });
 
-// ✅ 월간 랭킹
+// ✅ 월간 랭킹 (이달의 응답만)
 router.get("/monthly", async (req, res) => {
   try {
-    const users = await User.find().populate("responses.surveyId");
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    const countryMap = {};
 
-    for (const user of users) {
-      //console.log("✅ 유저 ID:", user.id);
-      for (const response of user.responses) {
-        if (!response.respondedAt) {
-          //console.log("⚠️ 응답에 respondedAt 없음:", response);
-          continue;
-        }
+    const filter = { respondedAt: { $gte: startOfMonth, $lte: endOfMonth } };
+    const result = await generateCountryRanking(filter);
 
-        const date = new Date(response.respondedAt);
-        if (isNaN(date.getTime())) {
-          //console.log("❌ Invalid Date:", response.respondedAt);
-          continue;
-        }
-
-        if (date < startOfMonth || date > endOfMonth) continue;
-
-        const survey = response.surveyId;
-        if (!survey || !survey.country) {
-          //console.log("⚠️ 월간: 유효하지 않은 설문:", survey);
-          continue;
-        }
-
-        const country = survey.country;
-
-        if (!countryMap[country]) countryMap[country] = {};
-
-        if (!countryMap[country][user.id]) {
-          countryMap[country][user.id] = {
-            id: user.id,
-            nickname: user.nickname,
-            profileImage: user.profileImage,
-            count: 0,
-          };
-        }
-
-        countryMap[country][user.id].count += 1;
-      }
-    }
-
-    const result = calculateRanking(countryMap);
     res.status(200).json(result);
   } catch (err) {
     console.error("❌ 월간 랭킹 조회 오류:", err);
