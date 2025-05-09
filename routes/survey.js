@@ -169,40 +169,7 @@ router.post("/:id/answer", async (req, res) => {
   }
 });
 
-//설문 승인 처리
-router.post("/:id/approve", async (req, res) => {
-  const surveyId = req.params.id;
 
-  try {
-    const updated = await Survey.findByIdAndUpdate(
-      surveyId,
-      { isApproved: true },
-      { new: true }
-    );
-
-    if (!updated) return res.status(404).json({ message: "설문 없음" });
-
-    res.status(200).json({ message: "승인 완료", survey: updated });
-  } catch (err) {
-    console.error("설문 승인 오류:", err);
-    res.status(500).json({ message: "서버 오류" });
-  }
-});
-
-//설문 거절
-router.post("/:id/reject", async (req, res) => {
-  const surveyId = req.params.id;
-
-  try {
-    const updated = await Survey.findByIdAndDelete(surveyId); // 또는 status: "rejected"로 처리
-    if (!updated) return res.status(404).json({ message: "설문 없음" });
-
-    res.status(200).json({ message: "거절 및 삭제 완료" });
-  } catch (err) {
-    console.error("설문 거절 오류:", err);
-    res.status(500).json({ message: "서버 오류" });
-  }
-});
 
 
 // 유저의 해당 설문 응답 개수 조회

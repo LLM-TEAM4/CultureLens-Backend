@@ -28,22 +28,7 @@ const UserSchema = new mongoose.Schema({
     enum: ["admin", "user"],
     default: "user"
   },
-  responses: [
-    {
-      surveyId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Survey", // 연관된 설문 참조
-      },
-      answers: {
-        type: [Number], // 각 문항에 대한 응답 점수
-        required: true,
-      },
-      respondedAt: {
-        type: Date,
-        default: Date.now, // 응답 시간 기록
-      },
-    },
-  ],
+  
 });
 
 const User = mongoose.model("User", UserSchema);
