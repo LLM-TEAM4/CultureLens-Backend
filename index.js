@@ -78,6 +78,22 @@ app.post("/api/logout", (req, res) => {
   });
 });
 
+app.use(session({
+  secret: 'your-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: true, // HTTPS 환경에서만
+    sameSite: 'none' // 크로스 도메인 쿠키를 허용
+  }
+}));
+
+app.use(cors({
+  origin: 'https://your-frontend-domain.com',
+  credentials: true
+}));
+
 // ✅ MongoDB 연결 및 서버 실행
 mongoose
   .connect(process.env.MONGO_URI)
