@@ -14,25 +14,7 @@ const rankingRoutes = require("./routes/ranking");
 const app = express();
 const port = process.env.PORT || 4000;
 
-// ✅ 세션 설정
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "your_secret_key",
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
-      collectionName: "sessions",
-      ttl: 60 * 60 * 2,
-    }),
-    cookie: {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      maxAge: 1000 * 60 * 60 * 2,
-    },
-  })
-);
+
 
 app.use(cors({
   origin: 'https://culturelens-frontend.vercel.app',
