@@ -16,7 +16,10 @@ const surveyRoutes = require("./routes/survey");                    // 설문 AP
 const homeSurveyRoutes = require("./routes/MainPage");              // 홈 화면용 설문 조회
 
 // ✅ 4. 미들웨어 등록
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true  // ← 이게 핵심!
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
