@@ -39,6 +39,8 @@ router.post("/", upload.single("image"), async (req, res) => {
       console.log("파일없음");
     }
 
+    user.credit-=1;
+    await user.save();
     const newSurvey = new Survey({
       user,
       country,
@@ -187,11 +189,19 @@ router.get("/", async (req, res) => {
 
 // 설문 응답 저장 (기존 응답 누적 저장)
 router.post("/:surveyId/answer", async (req, res) => {
+  console.log("응답저장 시도");
+  if (!req.session.user) {
+    return res.status(400).json({ message: "잘못된 요청입니다." });
+  }
+
+  const user = await User.findOne({ id: req.session.user.id });
+  if (!user) {
+    return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+  }
   const { surveyId } = req.params;
   const { answers } = req.body;
-  const userId = req.session.user?._id;
+  const userId = user._id;
 
-  if (!userId) return res.status(401).json({ message: "로그인이 필요합니다." });
 
   const existing = await Response.findOne({ userId, surveyId });
 
@@ -202,7 +212,9 @@ router.post("/:surveyId/answer", async (req, res) => {
   } else {
     await Response.create({ userId, surveyId, answers });
   }
-
+  user.credit=user.credit+1;
+  await user.save();
+  console.log(user.credit);
   res.json({ message: "응답 저장 완료" });
 });
 
