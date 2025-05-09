@@ -34,13 +34,15 @@ app.use(
   })
 );
 
-// ✅ CORS 설정
-app.use(
-  cors({
-    origin: "https://culturelens-frontend.vercel.app",
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: 'https://culturelens-frontend.vercel.app',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// 반드시 필요!
+app.options('*', cors());  // preflight 요청 수락
 
 // ✅ Body 파서
 app.use(bodyParser.json({ limit: "10mb" }));
