@@ -60,8 +60,6 @@ router.post("/", upload.single("image"), async (req, res) => {
 });
 
 
-
-
 // 설문 전체 목록 불러오기 (진행도 포함)
 router.get("/", async (req, res) => {
   const user = req.session.user;
@@ -132,8 +130,20 @@ router.post("/:surveyId/answer", async (req, res) => {
   res.json({ message: "응답 저장 완료" });
 });
 
+// ✅ 로그인한 유저의 모든 응답 조회
+router.get("/my", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
 
-
+  try {
+    const responses = await Response.find({ userId: req.session.user._id }).populate("surveyId");
+    res.json(responses);
+  } catch (err) {
+    console.error("❌ 응답 조회 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
 
 // 유저의 해당 설문 응답 개수 조회
 router.get("/:surveyId/progress", async (req, res) => {
@@ -149,14 +159,7 @@ router.get("/:surveyId/progress", async (req, res) => {
 });
 
 
-router.get("/pending", async (req, res) => {
-  try {
-    const pendingSurveys = await Survey.find({ isApproved: false });
-    res.status(200).json(pendingSurveys);
-  } catch (err) {
-    res.status(500).json({ message: "서버 오류" });
-  }
-});
+
 
 // GET /survey/:id
 router.get("/:id", async (req, res) => {
