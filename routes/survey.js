@@ -1,9 +1,13 @@
 const express = require("express");
 const router = express.Router();
+
 const multer = require("multer");
 const { uploadToNcpS3 } = require("../utils/s3");
+
 const Survey = require("../models/Survey");
 const User = require("../models/User");
+const Response = require("../models/Response");
+
 const mongoose = require("mongoose");
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -72,19 +76,20 @@ router.get("/", async (req, res) => {
   }
 
   try {
-    const surveys = await Survey.find({ approved: true });//일반유저는 승인된설문만 볼 수 있도록록
+    const surveys = await Survey.find();//일반유저는 승인된설문만 볼 수 있도록록
+    //const surveys = await Survey.find({ approved: true });
     //console.log("✅ 승인된 설문 조회 결과:", surveys);
     let userResponses = [];
     if (user?._id) {
-      const foundUser = await User.findById(user._id);
-      userResponses = foundUser.responses || [];
+      userResponses = await Response.find({ userId: user._id });
+      
     }
 
     const surveysWithProgress = surveys.map((survey) => {
       const matched = userResponses.find(
         (r) => r.surveyId.toString() === survey._id.toString()
       );
-
+    
       return {
         _id: survey._id,
         imageUrl: survey.imageUrl,
@@ -97,7 +102,7 @@ router.get("/", async (req, res) => {
         total: 20,
       };
     });
-
+    
     res.json(surveysWithProgress);
   } catch (error) {
     console.error("❌ 설문 목록 조회 오류:", error);
@@ -105,93 +110,44 @@ router.get("/", async (req, res) => {
   }
 });
 
+
 // 설문 응답 저장 (기존 응답 누적 저장)
-router.post("/:id/answer", async (req, res) => {
+router.post("/:surveyId/answer", async (req, res) => {
+  const { surveyId } = req.params;
   const { answers } = req.body;
-  const surveyId = req.params.id;
+  const userId = req.session.user?._id;
 
-  if (!req.session || !req.session.user) {
-    return res.status(401).json({ message: "로그인이 필요합니다." });
+  if (!userId) return res.status(401).json({ message: "로그인이 필요합니다." });
+
+  const existing = await Response.findOne({ userId, surveyId });
+
+  if (existing) {
+    existing.answers = answers;
+    existing.respondedAt = new Date();
+    await existing.save();
+  } else {
+    await Response.create({ userId, surveyId, answers });
   }
 
-  try {
-    const userId = req.session.user._id;
-    const user = await User.findById(userId);
-    const existingResponse = user.responses.find(
-      (r) => r.surveyId.toString() === surveyId
-    );
-
-    let combinedAnswers = answers;
-
-    if (existingResponse) {
-      combinedAnswers = [...existingResponse.answers];
-
-      for (let i = 0; i < answers.length; i++) {
-        const targetIndex = existingResponse.answers.length + i;
-        combinedAnswers[targetIndex] = answers[i];
-      }
-
-      await User.updateOne(
-        { _id: userId },
-        { $pull: { responses: { surveyId } } }
-      );
-    }
-
-    await User.updateOne(
-      { _id: userId },
-      {
-        $push: {
-          responses: {
-            surveyId,
-            answers: combinedAnswers,
-            respondedAt: new Date(),
-          },
-        },
-      }
-    );
-
-    await Survey.updateOne(
-      { _id: surveyId },
-      {
-        $push: {
-          responses: {
-            respondentId: userId,
-            answers,
-          },
-        },
-      }
-    );
-
-    res.status(200).json({ message: "응답 저장 완료" });
-  } catch (err) {
-    console.error("❌ 설문 응답 저장 오류:", err);
-    res.status(500).json({ message: "서버 오류" });
-  }
+  res.json({ message: "응답 저장 완료" });
 });
 
 
 
 
 // 유저의 해당 설문 응답 개수 조회
-router.get("/:id/progress", async (req, res) => {
-  if (!req.session?.user?._id) {
-    return res.status(401).json({ message: "로그인이 필요합니다." });
-  }
+router.get("/:surveyId/progress", async (req, res) => {
+  const { surveyId } = req.params;
+  const userId = req.session.user?._id;
 
-  const userId = req.session.user._id;
-  const surveyId = req.params.id;
+  if (!userId) return res.status(401).json({ message: "로그인이 필요합니다." });
 
-  try {
-    const user = await User.findById(userId);
-    const response = user.responses.find((r) => r.surveyId.toString() === surveyId);
-    const progress = response ? response.answers.length : 0;
+  const response = await Response.findOne({ userId, surveyId });
+  const progress = response?.answers.length || 0;
 
-    res.status(200).json({ progress });
-  } catch (err) {
-    console.error("❌ 설문 진행도 조회 오류:", err);
-    res.status(500).json({ message: "서버 오류" });
-  }
+  res.json({ progress });
 });
+
 
 router.get("/pending", async (req, res) => {
   try {
