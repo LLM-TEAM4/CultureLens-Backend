@@ -37,7 +37,7 @@ app.use(
 // ✅ CORS 설정
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: "https://culturelens-frontend.vercel.app",
     credentials: true,
   })
 );
@@ -90,7 +90,7 @@ app.use(session({
 }));
 
 app.use(cors({
-  origin: 'https://your-frontend-domain.com',
+  origin: 'https://',
   credentials: true
 }));
 
