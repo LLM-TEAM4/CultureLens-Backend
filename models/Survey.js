@@ -45,6 +45,10 @@ const SurveySchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  approved: {
+    type: Boolean,
+    default: null // null: 대기, true: 승인, false: 거절
+  },  
 });
 
 module.exports = mongoose.model("Survey", SurveySchema);

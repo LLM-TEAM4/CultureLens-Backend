@@ -16,8 +16,7 @@ Survey.responses는 중복 저장 가능 → 누적 이력 저장
 answers는 [1, 3, 4, ...] 형태의 점수 배열
 respondedAt은 시간 기록용 필드*/
 
-
-// 설문 등록
+// ✅ 설문 등록
 router.post("/", upload.single("image"), async (req, res) => {
   if (!req.session.user) {
     return res.status(400).json({ message: "잘못된 요청입니다." });
@@ -27,6 +26,7 @@ router.post("/", upload.single("image"), async (req, res) => {
   if (!user) {
     return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
   }
+
   try {
     const { admin, country, category, entityName } = req.body;
     const captions = JSON.parse(req.body.captions);
@@ -34,11 +34,10 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     let imageUrl = "";
     if (file) {
-      // 네이버 클라우드 S3 업로드 
-      const s3Result = await uploadToNcpS3(file);
+      const s3Result = await uploadToNcpS3(file); // 네이버 클라우드 S3 업로드
       imageUrl = s3Result;
-    } else{
-      console.log("파일없음");
+    } else {
+      console.log("파일 없음");
     }
 
     const newSurvey = new Survey({
@@ -59,8 +58,7 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 });
 
-
-// 설문 전체 목록 불러오기 (진행도 포함)
+// ✅ 설문 전체 목록 가져오기 + 진행도 포함
 router.get("/", async (req, res) => {
   const user = req.session.user;
 
@@ -74,20 +72,17 @@ router.get("/", async (req, res) => {
   }
 
   try {
-    const surveys = await Survey.find();//일반유저는 승인된설문만 볼 수 있도록록
-    //const surveys = await Survey.find({ approved: true });
-    //console.log("✅ 승인된 설문 조회 결과:", surveys);
+    const surveys = await Survey.find(); // 모든 설문
     let userResponses = [];
     if (user?._id) {
       userResponses = await Response.find({ userId: user._id });
-      
     }
 
     const surveysWithProgress = surveys.map((survey) => {
       const matched = userResponses.find(
         (r) => r.surveyId.toString() === survey._id.toString()
       );
-    
+
       return {
         _id: survey._id,
         imageUrl: survey.imageUrl,
@@ -100,7 +95,7 @@ router.get("/", async (req, res) => {
         total: 20,
       };
     });
-    
+
     res.json(surveysWithProgress);
   } catch (error) {
     console.error("❌ 설문 목록 조회 오류:", error);
@@ -108,8 +103,30 @@ router.get("/", async (req, res) => {
   }
 });
 
+// ✅ 설문 세부 정보 가져오기
+router.get("/:id", async (req, res) => {
+  try {
+    const survey = await Survey.findById(req.params.id);
+    if (!survey) return res.status(404).json({ message: "존재하지 않는 설문입니다" });
 
-// 설문 응답 저장 (기존 응답 누적 저장)
+    const progress = survey.responses?.length || 0;
+    const goal = 20;
+    const progressPercentage = (progress / goal) * 100;
+
+    res.json({
+      survey,
+      progress: {
+        current: progress,
+        total: goal,
+        percentage: progressPercentage.toFixed(2),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// ✅ 설문 응답 저장
 router.post("/:surveyId/answer", async (req, res) => {
   const { surveyId } = req.params;
   const { answers } = req.body;
@@ -145,7 +162,7 @@ router.get("/my", async (req, res) => {
   }
 });
 
-// 유저의 해당 설문 응답 개수 조회
+// ✅ 유저의 해당 설문 응답 개수 조회
 router.get("/:surveyId/progress", async (req, res) => {
   const { surveyId } = req.params;
   const userId = req.session.user?._id;
@@ -156,20 +173,6 @@ router.get("/:surveyId/progress", async (req, res) => {
   const progress = response?.answers.length || 0;
 
   res.json({ progress });
-});
-
-
-
-
-// GET /survey/:id
-router.get("/:id", async (req, res) => {
-  try {
-    const survey = await Survey.findById(req.params.id);
-    if (!survey) return res.status(404).json({ message: "존재하지 않는 설문입니다" });
-    res.status(200).json(survey);
-  } catch (err) {
-    res.status(500).json({ message: "서버 오류" });
-  }
 });
 
 module.exports = router;
