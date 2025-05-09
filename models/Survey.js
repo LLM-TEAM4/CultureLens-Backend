@@ -35,9 +35,10 @@ const SurveySchema = new mongoose.Schema({
       },
     },
   ],
-  approved: {
-    type: Boolean,
-    default: false,
+  status: { 
+    type: String, 
+    enum: ['pending', 'approved', 'rejected'], // 가능한 값 설정
+    default: 'pending', // 기본값을 '대기중'으로 설정
   },
   createdAt: {
     type: Date,
