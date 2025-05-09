@@ -91,7 +91,8 @@ router.get("/posted", async (req, res) => {
   }
 });
 
-// 등록된 모든 설문조사 조회 (관리자용)
+// 📁 routes/survey.js
+
 router.get("/all/posted", async (req, res) => {
   if (!req.session?.user?._id) {
     return res.status(401).json({ message: "로그인이 필요합니다." });
@@ -105,13 +106,17 @@ router.get("/all/posted", async (req, res) => {
 
     console.log("📥 관리자 설문 목록 요청");
 
-    const surveys = await Survey.find().sort({ createdAt: -1 });
+    const surveys = await Survey.find()
+      .sort({ createdAt: -1 })
+      .populate("user", "id email"); // ✅ 유저 정보 포함
+
     res.json(surveys);
   } catch (error) {
     console.error("❌ 관리자 설문 목록 조회 오류:", error);
     res.status(500).json({ message: "서버 오류가 발생했습니다." });
   }
 });
+
 
 
 // 설문 세부 정보 가져오기
@@ -134,7 +139,6 @@ router.get('/detail/:id', async (req, res) => {
 });
 
 
-// 설문 전체 목록 불러오기 (진행도 포함) - home. 
 router.get("/", async (req, res) => {
   const user = req.session.user;
 
@@ -148,12 +152,11 @@ router.get("/", async (req, res) => {
   }
 
   try {
-    const surveys = await Survey.find();//일반유저는 승인된설문만 볼 수 있도록록
-    //console.log("✅ 승인된 설문 조회 결과:", surveys);
+    const surveys = await Survey.find({ status: "approved" }); // ✅ 승인된 설문만
     let userResponses = [];
+
     if (user?._id) {
       userResponses = await Response.find({ userId: user._id });
-      
     }
 
     const surveysWithProgress = surveys.map((survey) => {
@@ -180,6 +183,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "서버 오류" });
   }
 });
+
 
 // 설문 응답 저장 (기존 응답 누적 저장)
 router.post("/:surveyId/answer", async (req, res) => {
@@ -229,5 +233,38 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// PATCH /survey/:id/status
+router.patch("/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status, rejectReason } = req.body;
+
+  if (!req.session?.user?._id) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+
+  try {
+    const user = await User.findById(req.session.user._id);
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ message: "접근 권한이 없습니다." });
+    }
+
+    const update = { status };
+    if (status === "rejected") {
+      update.rejectReason = rejectReason;
+    } else {
+      update.rejectReason = undefined;
+    }
+
+    const updatedSurvey = await Survey.findByIdAndUpdate(id, update, { new: true });
+    if (!updatedSurvey) {
+      return res.status(404).json({ message: "설문을 찾을 수 없습니다." });
+    }
+
+    res.json(updatedSurvey);
+  } catch (error) {
+    console.error("❌ 상태 변경 실패:", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
 
 module.exports = router;
