@@ -91,6 +91,28 @@ router.get("/posted", async (req, res) => {
   }
 });
 
+// 등록된 모든 설문조사 조회 (관리자용)
+router.get("/all/posted", async (req, res) => {
+  if (!req.session?.user?._id) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+
+  try {
+    const user = await User.findById(req.session.user._id);
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ message: "접근 권한이 없습니다." });
+    }
+
+    console.log("📥 관리자 설문 목록 요청");
+
+    const surveys = await Survey.find().sort({ createdAt: -1 });
+    res.json(surveys);
+  } catch (error) {
+    console.error("❌ 관리자 설문 목록 조회 오류:", error);
+    res.status(500).json({ message: "서버 오류가 발생했습니다." });
+  }
+});
+
 
 // 설문 세부 정보 가져오기
 router.get('/detail/:id', async (req, res) => {
