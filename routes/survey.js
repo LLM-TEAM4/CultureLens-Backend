@@ -39,7 +39,10 @@ router.post("/", upload.single("image"), async (req, res) => {
       console.log("파일없음");
     }
 
-    user.credit-=1;
+    if (user.credit > 0) {
+      user.credit -= 1;
+      await user.save();
+    }
     await user.save();
     const newSurvey = new Survey({
       user,
