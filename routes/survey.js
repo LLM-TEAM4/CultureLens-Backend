@@ -197,7 +197,7 @@ router.get("/:surveyId/progress", async (req, res) => {
 });
 
 // GET /survey/:id
-router.get("/posted/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const survey = await Survey.findById(req.params.id);
     if (!survey) return res.status(404).json({ message: "존재하지 않는 설문입니다" });
