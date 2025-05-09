@@ -1,9 +1,8 @@
 const mongoose = require("mongoose");
 
 const SurveySchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+  admin: {
+    type: String,
     required: true,
   },
   country: {
@@ -35,9 +34,12 @@ const SurveySchema = new mongoose.Schema({
       },
     },
   ],
-  approved: {
-    type: Boolean,
-    default: false,
+
+  //거절상태추가
+  status: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "pending",
   },
   createdAt: {
     type: Date,
