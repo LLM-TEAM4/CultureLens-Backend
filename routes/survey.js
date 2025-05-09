@@ -54,7 +54,7 @@ router.get("/", async (req, res) => {
 
   try {
     const surveys = await Survey.find({ approved: true });//일반유저는 승인된설문만 볼 수 있도록록
-    console.log("✅ 승인된 설문 조회 결과:", surveys);
+    //console.log("✅ 승인된 설문 조회 결과:", surveys);
     let userResponses = [];
     if (user?._id) {
       const foundUser = await User.findById(user._id);
