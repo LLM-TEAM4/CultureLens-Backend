@@ -58,6 +58,19 @@ router.post("/", upload.single("image"), async (req, res) => {
 });
 
 
+router.get("/my", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+
+  try {
+    const responses = await Response.find({ userId: req.session.user._id }).populate("surveyId");
+    res.json(responses);
+  } catch (err) {
+    console.error("❌ 응답 조회 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
 // 로그인한 사용자가 등록한 설문만 가져오기
 router.get("/posted", async (req, res) => {
   if (!req.session?.user?._id) {
@@ -80,7 +93,7 @@ router.get("/posted", async (req, res) => {
 
 
 // 설문 세부 정보 가져오기
-router.get('/:id', async (req, res) => {
+router.get('/detail/:id', async (req, res) => {
   const { id } = req.params; // URL에서 ID 받기
 
   try {
@@ -169,6 +182,7 @@ router.post("/:surveyId/answer", async (req, res) => {
 
 
 
+
 // 유저의 해당 설문 응답 개수 조회
 router.get("/:surveyId/progress", async (req, res) => {
   const { surveyId } = req.params;
@@ -183,7 +197,7 @@ router.get("/:surveyId/progress", async (req, res) => {
 });
 
 // GET /survey/:id
-router.get("/:id", async (req, res) => {
+router.get("/posted/:id", async (req, res) => {
   try {
     const survey = await Survey.findById(req.params.id);
     if (!survey) return res.status(404).json({ message: "존재하지 않는 설문입니다" });
@@ -192,5 +206,6 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ message: "서버 오류" });
   }
 });
+
 
 module.exports = router;
