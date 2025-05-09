@@ -1,8 +1,9 @@
 const mongoose = require("mongoose");
 
 const SurveySchema = new mongoose.Schema({
-  admin: {
-    type: String,
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
     required: true,
   },
   country: {
@@ -34,11 +35,10 @@ const SurveySchema = new mongoose.Schema({
       },
     },
   ],
-  isApproved: {
+  approved: {
     type: Boolean,
-    default: false, // 관리자 승인 전까지는 false
+    default: false,
   },
-
   createdAt: {
     type: Date,
     default: Date.now,
