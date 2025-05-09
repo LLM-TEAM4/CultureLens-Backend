@@ -89,10 +89,6 @@ app.use(session({
   }
 }));
 
-app.use(cors({
-  origin: 'https://',
-  credentials: true
-}));
 
 // ✅ MongoDB 연결 및 서버 실행
 mongoose
