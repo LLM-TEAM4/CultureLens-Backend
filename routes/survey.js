@@ -160,26 +160,42 @@ router.get("/", async (req, res) => {
 });
 
 // 설문 응답 저장 (기존 응답 누적 저장)
+/*
+처음 저장 ➡️ 새로 저장
+이어서 저장 ➡️ 기존 끝에서 덧붙임
+또 이어서 저장 ➡️ 계속 이어 붙임
+*/
+
 router.post("/:surveyId/answer", async (req, res) => {
   const { surveyId } = req.params;
   const { answers } = req.body;
   const userId = req.session.user?._id;
-
-  if (!userId) return res.status(401).json({ message: "로그인이 필요합니다." });
+  console.log("✅ 저장 요청 받은 surveyId:", surveyId); 
+  if (!userId) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
 
   const existing = await Response.findOne({ userId, surveyId });
 
   if (existing) {
-    existing.answers = answers;
+    // 기존 답변 길이 기준으로 업데이트
+    const combinedAnswers = [...existing.answers];
+
+    for (let i = 0; i < answers.length; i++) {
+      const targetIndex = existing.answers.length + i;
+      combinedAnswers[targetIndex] = answers[i];
+    }
+
+    existing.answers = combinedAnswers;
     existing.respondedAt = new Date();
     await existing.save();
   } else {
+    // 처음 저장할 때는 그대로
     await Response.create({ userId, surveyId, answers });
   }
 
   res.json({ message: "응답 저장 완료" });
 });
-
 
 
 
@@ -200,9 +216,31 @@ router.get("/:surveyId/progress", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const survey = await Survey.findById(req.params.id);
-    if (!survey) return res.status(404).json({ message: "존재하지 않는 설문입니다" });
-    res.status(200).json(survey);
+    if (!survey) {
+      return res.status(404).json({ message: "존재하지 않는 설문입니다" });
+    }
+
+    const responses = await Response.find({ surveyId: survey._id });
+
+    const votes = {};
+    survey.captions.forEach((_, idx) => {
+      votes[idx] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    });
+
+    responses.forEach((r) => {
+      r.answers.forEach((score, idx) => {
+        if (votes[idx] && votes[idx][score] !== undefined) {
+          votes[idx][score]++;
+        }
+      });
+    });
+
+    res.status(200).json({
+      ...survey.toObject(),
+      votes,
+    });
   } catch (err) {
+    console.error("❌ 설문 조회 오류:", err);
     res.status(500).json({ message: "서버 오류" });
   }
 });
