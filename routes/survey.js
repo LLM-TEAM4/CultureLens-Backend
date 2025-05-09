@@ -14,10 +14,18 @@ respondedAt은 시간 기록용 필드*/
 
 
 // 설문 등록
-router.post("/", upload.none(), async (req, res) => {
+router.post("/", upload.single("image"), async (req, res) => {
   try {
     const { admin, country, category, entityName } = req.body;
     const captions = JSON.parse(req.body.captions);
+    const file = req.file;
+
+    let imageUrl = "";
+    if (file) {
+      // 네이버 클라우드 S3 업로드 
+      const s3Result = await uploadToNcpS3(file);
+      imageUrl = s3Result;
+    }
 
     const newSurvey = new Survey({
       admin,
@@ -25,7 +33,7 @@ router.post("/", upload.none(), async (req, res) => {
       category,
       entityName,
       captions,
-      imageUrl: "", // 이미지 없이 비워둠
+      imageUrl,
       isApproved: false,
     });
 
@@ -36,6 +44,7 @@ router.post("/", upload.none(), async (req, res) => {
     res.status(500).json({ message: "서버 오류" });
   }
 });
+
 
 
 
