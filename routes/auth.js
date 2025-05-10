@@ -84,11 +84,6 @@ router.post("/login", async (req, res) => {
     console.log("🔑 로그인 요청:", id);
     console.log("🟡 로그인 요청 PW(입력값):", password);
 
-    
-
-
-
-
     const user = await User.findOne({ id });
     if (!user) {
       return res.status(400).json({ message: "아이디가 존재하지 않습니다." });

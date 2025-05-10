@@ -13,6 +13,12 @@ const rankingRoutes = require("./routes/ranking");
 
 const app = express();
 const port = process.env.PORT || 4000;
+app.use(
+  cors({
+    origin: "https://culturelens-frontend.vercel.app",  // 클라이언트의 도메인
+    credentials: true,  // 쿠키를 전송하려면 이 설정 필요
+  })
+);
 
 // ✅ 세션 설정
 app.use(
