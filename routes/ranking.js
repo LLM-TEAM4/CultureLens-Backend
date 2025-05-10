@@ -75,13 +75,25 @@ async function generateCountryRanking(filter = {}) {
 // ✅ 주간 랭킹 (기간 제한 없이 전체 응답 기준)
 router.get("/weekly", async (req, res) => {
   try {
-    const result = await generateCountryRanking();
-    res.status(200).json(result);
-  } catch (err) {
-    console.error("❌ 주간 랭킹 조회 오류:", err);
+    const cumulativeRanking = await Response.aggregate([
+      { $group: { _id: "$userId", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "userInfo" } },
+      { $unwind: "$userInfo" },
+      { $project: { id: "$userInfo.id", nickname: "$userInfo.nickname", count: 1 } }
+    ]);
+    const ranked = cumulativeRanking.map((user, index) => ({
+      ...user,
+      rank: index + 1
+    }));
+    res.status(200).json(cumulativeRanking);
+  } catch (error) {
+    console.error("❌ 주간 누적 랭킹 조회 오류:", error);
     res.status(500).json({ message: "서버 오류" });
   }
 });
+
 
 // ✅ 월간 랭킹 (이달의 응답만)
 router.get("/monthly", async (req, res) => {
@@ -90,14 +102,69 @@ router.get("/monthly", async (req, res) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-    const filter = { respondedAt: { $gte: startOfMonth, $lte: endOfMonth } };
-    const result = await generateCountryRanking(filter);
-
-    res.status(200).json(result);
-  } catch (err) {
-    console.error("❌ 월간 랭킹 조회 오류:", err);
+    const cumulativeMonthlyRanking = await Response.aggregate([
+      { $match: { respondedAt: { $gte: startOfMonth, $lte: endOfMonth } } },
+      { $group: { _id: "$userId", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "userInfo" } },
+      { $unwind: "$userInfo" },
+      { $project: { id: "$userInfo.id", nickname: "$userInfo.nickname", count: 1 } }
+    ]);
+    const ranked = cumulativeRanking.map((user, index) => ({
+      ...user,
+      rank: index + 1
+    }));
+    res.status(200).json(cumulativeMonthlyRanking);
+  } catch (error) {
+    console.error("❌ 월간 누적 랭킹 조회 오류:", error);
     res.status(500).json({ message: "서버 오류" });
   }
 });
+
+// ✅ 국가별 랭킹 조회 라우터 추가
+router.get("/country/:country", async (req, res) => {
+  const { country } = req.params;
+  const { period } = req.query;
+
+  let dateFilter = {};
+  if (period === "monthly") {
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59);
+    dateFilter = { respondedAt: { $gte: startOfMonth, $lte: endOfMonth } };
+  }
+
+  const responses = await Response.find(dateFilter)
+    .populate("surveyId")
+    .populate("userId");
+
+  const userCounts = {};
+
+  for (const res of responses) {
+    if (res.surveyId?.country !== country) continue;
+    const userId = res.userId?._id?.toString();
+    if (!userId) continue;
+    userCounts[userId] = (userCounts[userId] || 0) + 1;
+  }
+
+  const users = await User.find({ _id: { $in: Object.keys(userCounts) } });
+
+  const ranking = users
+  .map(u => ({
+    id: u.id,
+    nickname: u.nickname,
+    profileImage: u.profileImage,
+    count: userCounts[u._id.toString()],
+  }))
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 5)
+  .map((user, index) => ({
+    ...user,
+    rank: index + 1  
+  }));
+
+  res.json(ranking);
+});
+
 
 module.exports = router;

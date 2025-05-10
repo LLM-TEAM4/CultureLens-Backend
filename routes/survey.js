@@ -84,7 +84,19 @@ router.get("/posted", async (req, res) => {
     const surveys = await Survey.find({ user: userId }).sort({ createdAt: -1 });
     console.log("📦 내가 등록한 설문들:", surveys);
 
-    res.json(surveys);
+    const surveysWithResponseCount = await Promise.all(
+      surveys.map(async (survey) => {
+        const responses = await Response.find({ surveyId: survey._id });
+        const uniqueUserCount = new Set(responses.map(r => r.userId.toString())).size;
+
+        return {
+          ...survey.toObject(),
+          responseUserCount: uniqueUserCount,  // ✅ 고유 응답자 수 포함
+        };
+      })
+    );
+
+    res.json(surveysWithResponseCount); 
   } catch (error) {
     console.error("❌ 내가 등록한 설문 가져오기 오류:", error);
     res.status(500).json({ message: "설문 목록을 불러오는 중 오류가 발생했습니다." });
@@ -247,6 +259,7 @@ router.get("/:id", async (req, res) => {
     }
 
     const responses = await Response.find({ surveyId: survey._id });
+    const uniqueUserCount = new Set(responses.map(r => r.userId.toString())).size;
 
     const votes = {};
     survey.captions.forEach((_, idx) => {
@@ -264,6 +277,12 @@ router.get("/:id", async (req, res) => {
     res.status(200).json({
       ...survey.toObject(),
       votes,
+      participantCount: uniqueUserCount
+    });
+    console.log("응답 데이터", {
+      ...survey.toObject(),
+      votes,
+      participantCount: uniqueUserCount
     });
   } catch (err) {
     console.error("❌ 설문 조회 오류:", err);

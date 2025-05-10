@@ -53,7 +53,7 @@ app.use(express.urlencoded({ extended: true }));
 // ✅ 라우터
 app.use("/api/auth", authRoutes);
 app.use("/survey", surveyRoutes);
-app.use("/api/ranking", rankingRoutes);
+app.use("/ranking", rankingRoutes);
 
 // ✅ 루트 테스트
 app.get("/", (req, res) => {
