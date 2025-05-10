@@ -32,6 +32,15 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// ✅ OPTIONS 요청에 대해 204 상태 코드 반환 (Express에서 처리)
+app.options(/.*/, (req, res) => {
+  res.header('Access-Control-Allow-Origin', 'https://culturelens-frontend.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(204); // 204 응답으로 OPTIONS 요청 처리
+});
+
 // ✅ Body 파서
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
