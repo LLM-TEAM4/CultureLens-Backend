@@ -25,7 +25,6 @@ app.use(session({
   }
 }));
 
-app.use(cors());  
 
 // ✅ Body 파서
 app.use(bodyParser.json({ limit: "10mb" }));
@@ -39,13 +38,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes);
 app.use("/survey", surveyRoutes);
 app.use("/api/ranking", rankingRoutes);
-
 // Global error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send({ error: '서버 오류가 발생했습니다.' });
 });
-
 // ✅ 루트 테스트
 app.get("/", (req, res) => {
   res.send("✅ 서버가 잘 작동 중입니다.");
