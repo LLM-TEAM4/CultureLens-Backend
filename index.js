@@ -25,21 +25,7 @@ app.use(session({
   }
 }));
 
-app.use(cors({
-  origin: 'https://culturelens-frontend.vercel.app',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// ✅ OPTIONS 요청에 대해 204 상태 코드 반환 (Express에서 처리)
-app.options(/.*/, (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'https://culturelens-frontend.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(204); // 204 응답으로 OPTIONS 요청 처리
-});
+app.use(cors());  
 
 // ✅ Body 파서
 app.use(bodyParser.json({ limit: "10mb" }));
@@ -53,6 +39,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes);
 app.use("/survey", surveyRoutes);
 app.use("/api/ranking", rankingRoutes);
+
+// Global error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send({ error: '서버 오류가 발생했습니다.' });
+});
 
 // ✅ 루트 테스트
 app.get("/", (req, res) => {
