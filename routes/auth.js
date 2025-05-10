@@ -84,17 +84,16 @@ router.post("/login", async (req, res) => {
     console.log("🔑 로그인 요청:", id);
     console.log("🟡 로그인 요청 PW(입력값):", password);
 
-    
-
-
-
-
-    const user = await User.findOne({ id });
+    console.log("🔍 DB 조회 시작");
+const user = await User.findOne({ id });
+console.log("✅ DB 조회 완료");
     if (!user) {
       return res.status(400).json({ message: "아이디가 존재하지 않습니다." });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    console.log("🔍 비밀번호 비교 시작");
+const isMatch = await bcrypt.compare(password, user.password);
+console.log("✅ 비밀번호 비교 완료");
     if (!isMatch) {
       return res.status(400).json({ message: "비밀번호가 틀립니다." });
     }
