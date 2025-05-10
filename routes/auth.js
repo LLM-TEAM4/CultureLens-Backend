@@ -114,7 +114,8 @@ router.post("/login", async (req, res) => {
     res.status(200).json({ 
       message: "로그인 성공",
       role: user.role,
-      user: req.session.user });
+      user: req.session.user,
+    cookie:req.cookies });
 
   } catch (error) {
     console.error("❌ 로그인 오류:", error);
