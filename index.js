@@ -32,9 +32,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// 반드시 필요!
-app.options(/(.*)/, cors());  // preflight 요청 수락
-
 // ✅ Body 파서
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
