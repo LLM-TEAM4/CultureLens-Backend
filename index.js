@@ -6,6 +6,8 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const cookieParser = require('cookie-parser');
+
 
 const authRoutes = require("./routes/auth");
 const surveyRoutes = require("./routes/survey");
