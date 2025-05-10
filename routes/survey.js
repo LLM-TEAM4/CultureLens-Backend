@@ -185,7 +185,7 @@ router.get("/", async (req, res) => {
         title: `${survey.country} > ${survey.category} > ${survey.entityName}`,
         captions: survey.captions,
         progress: matched ? matched.answers.length : 0,
-        total: 20,
+        total: survey.captions.length,
       };
     });
 
