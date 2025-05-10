@@ -27,20 +27,13 @@ app.use(
     }),
     cookie: {
       httpOnly: true,
-      secure: false,
+      secure: true,
       sameSite: "lax",
       maxAge: 1000 * 60 * 60 * 2,
     },
   })
 );
 
-// ✅ CORS 설정
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true,
-  })
-);
 
 // ✅ Body 파서
 app.use(bodyParser.json({ limit: "10mb" }));
