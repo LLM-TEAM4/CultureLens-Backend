@@ -91,9 +91,13 @@ console.log("✅ DB 조회 완료");
       return res.status(400).json({ message: "아이디가 존재하지 않습니다." });
     }
 
-    console.log("🔍 비밀번호 비교 시작");
-const isMatch = await bcrypt.compareSync(password, user.password);
-console.log("✅ 비밀번호 비교 완료");
+    try {
+      console.log("🔍 비밀번호 비교 시작");
+      const isMatch = await bcrypt.compare(password, user.password);
+      console.log("✅ 비밀번호 비교 완료");
+    } catch (error) {
+      console.error("❌ 비밀번호 비교 오류:", error);
+    }
     if (!isMatch) {
       return res.status(400).json({ message: "비밀번호가 틀립니다." });
     }
