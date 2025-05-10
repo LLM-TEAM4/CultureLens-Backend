@@ -92,7 +92,7 @@ console.log("✅ DB 조회 완료");
     }
 
     console.log("🔍 비밀번호 비교 시작");
-const isMatch = await bcryptjs.compare(password, user.password);
+const isMatch = await bcrypt.compareSync(password, user.password);
 console.log("✅ 비밀번호 비교 완료");
     if (!isMatch) {
       return res.status(400).json({ message: "비밀번호가 틀립니다." });
