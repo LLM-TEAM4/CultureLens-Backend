@@ -15,6 +15,7 @@ const rankingRoutes = require("./routes/ranking");
 
 const app = express();
 const port = process.env.PORT || 4000;
+
 app.use(cookieParser());
 
 app.use(
@@ -40,6 +41,7 @@ app.use(
       secure: true,
       sameSite: "None",
       maxAge: 1000 * 60 * 60 * 2,
+      domain: 'culturelens-frontend.vercel.app'
     },
   })
 );
