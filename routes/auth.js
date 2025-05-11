@@ -110,6 +110,10 @@ router.post("/login", async (req, res) => {
       role: user.role,
     });
     console.log(req.session);
+    res.setHeader(
+      'Set-Cookie', 
+      `connect.sid=${sessionId}; Path=/; HttpOnly; Secure; SameSite=None; Domain=culturelens-frontend.vercel.app; Max-Age=7200`
+    );
     // ✅ 응답도 한 번만
     res.status(200).json({ 
       message: "로그인 성공",
