@@ -101,15 +101,8 @@ router.post("/login", async (req, res) => {
       profileImage: user.profileImage,
       nickname: user.nickname,
     };
+    const sessionId = req.sessionID;  // 여기서 req.sessionID로 세션 ID를 가져옵니다
 
-   
-    console.log("✅ 로그인 성공:", {
-      id: user.id,
-      nickname: user.nickname,
-      profileImage: user.profileImage?.substring(0, 20) + "...(생략)",
-      role: user.role,
-    });
-    console.log(req.session);
     res.setHeader(
       'Set-Cookie', 
       `connect.sid=${sessionId}; Path=/; HttpOnly; Secure; SameSite=None; Domain=culturelens-frontend.vercel.app; Max-Age=7200`
