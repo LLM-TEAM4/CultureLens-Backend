@@ -109,7 +109,7 @@ router.post("/login", async (req, res) => {
       profileImage: user.profileImage?.substring(0, 20) + "...(생략)",
       role: user.role,
     });
-    console.log(req.cookies);
+    console.log(req.session);
     // ✅ 응답도 한 번만
     res.status(200).json({ 
       message: "로그인 성공",
