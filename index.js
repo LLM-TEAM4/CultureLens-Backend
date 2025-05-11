@@ -35,14 +35,7 @@ app.use(
       mongoUrl: process.env.MONGO_URI,
       collectionName: "sessions",
       ttl: 60 * 60 * 2,
-    }),
-    cookie: {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      maxAge: 1000 * 60 * 60 * 2,
-      domain: 'culturelens-frontend.vercel.app'
-    },
+    })
   })
 );
 
