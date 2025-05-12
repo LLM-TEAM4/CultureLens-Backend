@@ -1,10 +1,10 @@
 require("dotenv").config();
-
+const cors = require("cors");
 const express = require("express");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
-const cors = require("cors");
+
 const bodyParser = require("body-parser");
 
 const authRoutes = require("./routes/auth");
@@ -13,6 +13,9 @@ const rankingRoutes = require("./routes/ranking");
 
 const app = express();
 const port = process.env.PORT || 4000;
+const surveyExportRoutes = require("./routes/SurveyExport");
+
+
 
 // ✅ 세션 설정
 app.use(
@@ -77,6 +80,8 @@ app.post("/api/logout", (req, res) => {
     res.send("로그아웃 성공");
   });
 });
+
+app.use("/survey", surveyExportRoutes);
 
 // ✅ MongoDB 연결 및 서버 실행
 mongoose
