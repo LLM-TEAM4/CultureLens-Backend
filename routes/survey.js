@@ -150,6 +150,126 @@ router.get('/detail/:id', async (req, res) => {
   }
 });
 
+// 관리자통합통계 계산로직 - 국가별별
+router.get("/statistics/country-averages", async (req, res) => {
+  try {
+    const responses = await Response.find().populate("surveyId");
+    const surveys = await Survey.find();
+
+    const countryStats = {};
+
+    responses.forEach((response) => {
+      const survey = response.surveyId;
+      if (!survey) return;
+
+      const country = survey.country;
+      const answerSum = response.answers.reduce((a, b) => a + b, 0);
+      const answerCount = response.answers.length;
+
+      if (!countryStats[country]) {
+        countryStats[country] = {
+          scoreSum: 0,
+          countSum: 0,
+          surveys: new Set(),
+          participants: new Set(),
+        };
+      }
+
+      countryStats[country].scoreSum += answerSum;
+      countryStats[country].countSum += answerCount;
+      countryStats[country].surveys.add(survey._id.toString());
+      countryStats[country].participants.add(response.userId.toString());
+    });
+
+    surveys.forEach((survey) => {
+      const country = survey.country;
+      if (!countryStats[country]) {
+        countryStats[country] = {
+          scoreSum: 0,
+          countSum: 0,
+          surveys: new Set(),
+          participants: new Set(),
+        };
+      }
+      countryStats[country].surveys.add(survey._id.toString());
+    });
+
+    const result = Object.entries(countryStats).map(([country, stats]) => ({
+      country,
+      averageScore: stats.countSum > 0 ? Number((stats.scoreSum / stats.countSum).toFixed(2)) : 0,
+      totalResponses: stats.countSum,
+      totalSurveys: stats.surveys.size,
+      totalParticipants: stats.participants.size,
+    }));
+
+    res.json(result);  // ✅ 배열 반환
+  } catch (error) {
+    console.error("❌ 국가별 평균 계산 오류:", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 관리자통합통계 계산로직 - 카테고리별
+router.get("/statistics/category-averages", async (req, res) => {
+  try {
+    const surveys = await Survey.find();
+    const categoryMap = {};
+
+    surveys.forEach((survey) => {
+      const category = survey.category || "기타";
+      if (!categoryMap[category]) {
+        categoryMap[category] = [];
+      }
+      categoryMap[category].push({
+        _id: survey._id,
+        entityName: survey.entityName,
+      });
+    });
+
+    const result = Object.entries(categoryMap).map(([category, items]) => ({
+      category,
+      items,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error("❌ 카테고리별 통계 조회 오류:", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+router.get("/category/:categoryName", async (req, res) => {
+  const { categoryName } = req.params;
+  try {
+    const surveys = await Survey.find({ category: categoryName });
+
+    const surveysWithStats = await Promise.all(
+      surveys.map(async (survey) => {
+        const responses = await Response.find({ surveyId: survey._id });
+        const uniqueUserCount = new Set(responses.map(r => r.userId.toString())).size;
+
+        // 모든 답변 평점 평균 계산
+        const allScores = responses.flatMap(r => r.answers);
+        const averageScore = allScores.length > 0 
+          ? (allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(2)
+          : null;
+
+        return {
+          ...survey.toObject(),
+          responseUserCount: uniqueUserCount,  // ✅ 응답자 수
+          averageScore: averageScore,         // ✅ 평균 평점
+        };
+      })
+    );
+
+    res.json(surveysWithStats);
+  } catch (error) {
+    console.error("❌ 카테고리별 설문 조회 오류:", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+
 
 router.get("/", async (req, res) => {
   const user = req.session.user;
@@ -196,6 +316,19 @@ router.get("/", async (req, res) => {
   }
 });
 
+// 전체 설문 수와 전체 고유 응답자 수 반환
+router.get("/statistics/summary", async (req, res) => {
+  try {
+    const totalSurveys = await Survey.countDocuments();
+    const uniqueUserIds = await Response.distinct("userId");
+    const totalParticipants = uniqueUserIds.length;
+
+    res.json({ totalSurveys, totalParticipants });
+  } catch (error) {
+    console.error("❌ 통계 요약 조회 오류:", error);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
 
 // 설문 응답 저장 (기존 응답 누적 저장)
 /*
