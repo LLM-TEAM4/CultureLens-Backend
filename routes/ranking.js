@@ -78,7 +78,7 @@ router.get("/weekly", async (req, res) => {
     const cumulativeRanking = await Response.aggregate([
       { $group: { _id: "$userId", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
-      { $limit: 5 },
+      { $limit: 50 },
       { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "userInfo" } },
       { $unwind: "$userInfo" },
       { $project: { id: "$userInfo.id", nickname: "$userInfo.nickname", count: 1 } }
